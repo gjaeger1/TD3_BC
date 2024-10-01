@@ -1,9 +1,7 @@
 import numpy as np
 import torch
-import gym
 import argparse
 import os
-import d4rl
 import csv
 
 import utils
@@ -12,26 +10,26 @@ import TD3_BC
 
 # Runs policy for X episodes and returns D4RL score
 # A fixed seed is used for the eval environment
-def eval_policy(policy, env_name, seed, mean, std, seed_offset=100, eval_episodes=10):
-	eval_env = gym.make(env_name)
-	eval_env.seed(seed + seed_offset)
+# def eval_policy(policy, env_name, seed, mean, std, seed_offset=100, eval_episodes=10):
+# 	eval_env = gym.make(env_name)
+# 	eval_env.seed(seed + seed_offset)
 
-	avg_reward = 0.
-	for _ in range(eval_episodes):
-		state, done = eval_env.reset(), False
-		while not done:
-			state = (np.array(state).reshape(1,-1) - mean)/std
-			action = policy.select_action(state)
-			state, reward, done, _ = eval_env.step(action)
-			avg_reward += reward
+# 	avg_reward = 0.
+# 	for _ in range(eval_episodes):
+# 		state, done = eval_env.reset(), False
+# 		while not done:
+# 			state = (np.array(state).reshape(1,-1) - mean)/std
+# 			action = policy.select_action(state)
+# 			state, reward, done, _ = eval_env.step(action)
+# 			avg_reward += reward
 
-	avg_reward /= eval_episodes
-	d4rl_score = eval_env.get_normalized_score(avg_reward) * 100
+# 	avg_reward /= eval_episodes
+# 	d4rl_score = eval_env.get_normalized_score(avg_reward) * 100
 
-	print("---------------------------------------")
-	print(f"Evaluation over {eval_episodes} episodes: {avg_reward:.3f}, D4RL score: {d4rl_score:.3f}")
-	print("---------------------------------------")
-	return d4rl_score
+# 	print("---------------------------------------")
+# 	print(f"Evaluation over {eval_episodes} episodes: {avg_reward:.3f}, D4RL score: {d4rl_score:.3f}")
+# 	print("---------------------------------------")
+# 	return d4rl_score
 
 
 if __name__ == "__main__":
@@ -78,22 +76,23 @@ if __name__ == "__main__":
 	
 	# if we don't have a replay buffer, we use the dataset from d4rl
 	if args.replay_buffer == "":
-		env = gym.make(args.env)
-		env.seed(args.seed)
-		env.action_space.seed(args.seed)
+		raise ValueError("Please provide a replay buffer")
+		# env = gym.make(args.env)
+		# env.seed(args.seed)
+		# env.action_space.seed(args.seed)
 		
 		
-		state_dim = env.observation_space.shape[0]
-		action_dim = env.action_space.shape[0] 
-		max_action = float(env.action_space.high[0])
+		# state_dim = env.observation_space.shape[0]
+		# action_dim = env.action_space.shape[0] 
+		# max_action = float(env.action_space.high[0])
 
-		# Prepare replay buffer
-		replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
-		replay_buffer.convert_D4RL(d4rl.qlearning_dataset(env))
-		if args.normalize:
-			mean,std = replay_buffer.normalize_states() 
-		else:
-			mean,std = 0,1
+		# # Prepare replay buffer
+		# replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
+		# replay_buffer.convert_D4RL(d4rl.qlearning_dataset(env))
+		# if args.normalize:
+		# 	mean,std = replay_buffer.normalize_states() 
+		# else:
+		# 	mean,std = 0,1
 	else:
 		# local function to convert string to numpy array
 		def to_numpy_array(string):
@@ -115,19 +114,6 @@ if __name__ == "__main__":
 				action = to_numpy_array(row['action'])
 
 				max_action = max(max_action, np.max(np.abs(action)))
-				# update maximal action in each dimensions
-				# if max_action is None:
-				# 	max_action = action.reshape((1,2)) 
-				# else:
-				# 	# concatenate max_action and abs(action)
-				# 	con_cat = np.concatenate((max_action, np.abs(action.reshape((1,2)))), axis=0)
-				# 	max_action = np.max(con_cat, axis=0).reshape((1,2))
-
-				# print("Observation: ", obs)
-				# print("Next Observation: ", next_obs)
-				# print("Reward: ", reward)
-				# print("Done: ", done)
-				# print("Action: ", action)
 
 				if done:
 					next_obs = np.zeros_like(obs)
@@ -187,8 +173,8 @@ if __name__ == "__main__":
 	for t in range(int(args.max_timesteps)):
 		policy.train(replay_buffer, args.batch_size)
 		# Evaluate episode
-		if (t + 1) % args.eval_freq == 0:
-			print(f"Time steps: {t+1}")
-			evaluations.append(eval_policy(policy, args.env, args.seed, mean, std))
-			np.save(f"./results/{file_name}", evaluations)
-			if args.save_model: policy.save(f"./models/{file_name}")
+		# if (t + 1) % args.eval_freq == 0:
+		# 	print(f"Time steps: {t+1}")
+		# 	evaluations.append(eval_policy(policy, args.env, args.seed, mean, std))
+		# 	np.save(f"./results/{file_name}", evaluations)
+		# 	if args.save_model: policy.save(f"./models/{file_name}")
