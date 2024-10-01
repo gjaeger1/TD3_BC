@@ -7,37 +7,11 @@ import csv
 import utils
 import TD3_BC
 
-
-# Runs policy for X episodes and returns D4RL score
-# A fixed seed is used for the eval environment
-# def eval_policy(policy, env_name, seed, mean, std, seed_offset=100, eval_episodes=10):
-# 	eval_env = gym.make(env_name)
-# 	eval_env.seed(seed + seed_offset)
-
-# 	avg_reward = 0.
-# 	for _ in range(eval_episodes):
-# 		state, done = eval_env.reset(), False
-# 		while not done:
-# 			state = (np.array(state).reshape(1,-1) - mean)/std
-# 			action = policy.select_action(state)
-# 			state, reward, done, _ = eval_env.step(action)
-# 			avg_reward += reward
-
-# 	avg_reward /= eval_episodes
-# 	d4rl_score = eval_env.get_normalized_score(avg_reward) * 100
-
-# 	print("---------------------------------------")
-# 	print(f"Evaluation over {eval_episodes} episodes: {avg_reward:.3f}, D4RL score: {d4rl_score:.3f}")
-# 	print("---------------------------------------")
-# 	return d4rl_score
-
-
 if __name__ == "__main__":
 	
 	parser = argparse.ArgumentParser()
 	# Experiment
 	parser.add_argument("--policy", default="TD3_BC")               # Policy name
-	parser.add_argument("--env", default="hopper-medium-v0")        # OpenAI gym environment name
 	parser.add_argument("--replay_buffer", default="")          # Path to CSV file holding a dataset to be used as a replay buffer
 	parser.add_argument("--seed", default=0, type=int)              # Sets Gym, PyTorch and Numpy seeds
 	parser.add_argument("--eval_freq", default=5e3, type=int)       # How often (time steps) we evaluate
@@ -62,7 +36,7 @@ if __name__ == "__main__":
 
 	file_name = f"{args.policy}_{args.env}_{args.seed}"
 	print("---------------------------------------")
-	print(f"Policy: {args.policy}, Env: {args.env}, Seed: {args.seed}")
+	print(f"Policy: {args.policy}, Seed: {args.seed}")
 	print("---------------------------------------")
 
 	if not os.path.exists("./results"):
@@ -74,73 +48,53 @@ if __name__ == "__main__":
 	torch.manual_seed(args.seed)
 	np.random.seed(args.seed)
 	
-	# if we don't have a replay buffer, we use the dataset from d4rl
-	if args.replay_buffer == "":
-		raise ValueError("Please provide a replay buffer")
-		# env = gym.make(args.env)
-		# env.seed(args.seed)
-		# env.action_space.seed(args.seed)
-		
-		
-		# state_dim = env.observation_space.shape[0]
-		# action_dim = env.action_space.shape[0] 
-		# max_action = float(env.action_space.high[0])
-
-		# # Prepare replay buffer
-		# replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
-		# replay_buffer.convert_D4RL(d4rl.qlearning_dataset(env))
-		# if args.normalize:
-		# 	mean,std = replay_buffer.normalize_states() 
-		# else:
-		# 	mean,std = 0,1
-	else:
-		# local function to convert string to numpy array
-		def to_numpy_array(string):
-			# Remove the brackets and newlines and split the string into individual numbers
-			numbers = string.strip('[]').replace('\n','').split()
-			return np.array(numbers, dtype=float)
+	# local function to convert string to numpy array
+	def to_numpy_array(string):
+		# Remove the brackets and newlines and split the string into individual numbers
+		numbers = string.strip('[]').replace('\n','').split()
+		return np.array(numbers, dtype=float)
 
 
-		# Load replay buffer from CSV file 
-		with open(args.replay_buffer, newline='') as csvfile:
-			reader = csv.DictReader(csvfile)
-			replay_buffer = None 
-			max_action = 0
-			for row in reader:
-				obs = to_numpy_array(row['observation'])
-				next_obs = to_numpy_array(row['next_observation'])
-				reward = float(row['reward'])
-				done = True if row['done'].lower() == 'true' else False
-				action = to_numpy_array(row['action'])
+	# Load replay buffer from CSV file 
+	with open(args.replay_buffer, newline='') as csvfile:
+		reader = csv.DictReader(csvfile)
+		replay_buffer = None 
+		max_action = 0
+		for row in reader:
+			obs = to_numpy_array(row['observation'])
+			next_obs = to_numpy_array(row['next_observation'])
+			reward = float(row['reward'])
+			done = True if row['done'].lower() == 'true' else False
+			action = to_numpy_array(row['action'])
 
-				max_action = max(max_action, np.max(np.abs(action)))
+			max_action = max(max_action, np.max(np.abs(action)))
 
-				if done:
-					next_obs = np.zeros_like(obs)
-					action = np.zeros_like(action)
+			if done:
+				next_obs = np.zeros_like(obs)
+				action = np.zeros_like(action)
 
-				if replay_buffer is None:
-					state_dim = obs.shape[0]
-					action_dim = action.shape[0]
-					print(state_dim, action_dim)
-					replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
-				
-				if not obs.shape[0] == state_dim:
-					print(obs)
-					print(row['observation'])
+			if replay_buffer is None:
+				state_dim = obs.shape[0]
+				action_dim = action.shape[0]
+				print(state_dim, action_dim)
+				replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
+			
+			if not obs.shape[0] == state_dim:
+				print(obs)
+				print(row['observation'])
 
-				if not action.shape[0] == action_dim:
-					print(action)
-					print(row['action'])
+			if not action.shape[0] == action_dim:
+				print(action)
+				print(row['action'])
 
 
-				if not next_obs.shape[0] == state_dim:
-					print(next_obs)
-					print(row['next_observation'])
+			if not next_obs.shape[0] == state_dim:
+				print(next_obs)
+				print(row['next_observation'])
 
-				replay_buffer.add(obs, action, next_obs, reward, done)
+			replay_buffer.add(obs, action, next_obs, reward, done)
 
-		mean,std = replay_buffer.normalize_states()
+	mean,std = replay_buffer.normalize_states()
 
 
 	# print statistics of replay buffer
@@ -169,12 +123,9 @@ if __name__ == "__main__":
 		policy_file = file_name if args.load_model == "default" else args.load_model
 		policy.load(f"./models/{policy_file}")
 
-	evaluations = []
 	for t in range(int(args.max_timesteps)):
 		policy.train(replay_buffer, args.batch_size)
 		# Evaluate episode
-		# if (t + 1) % args.eval_freq == 0:
-		# 	print(f"Time steps: {t+1}")
-		# 	evaluations.append(eval_policy(policy, args.env, args.seed, mean, std))
-		# 	np.save(f"./results/{file_name}", evaluations)
-		# 	if args.save_model: policy.save(f"./models/{file_name}")
+		if (t + 1) % args.eval_freq == 0:
+			print(f"Time steps: {t+1}")
+			if args.save_model: policy.save(f"./models/{file_name}")
