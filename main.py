@@ -4,6 +4,7 @@ import gym
 import argparse
 import os
 import d4rl
+import csv
 
 import utils
 import TD3_BC
@@ -39,6 +40,7 @@ if __name__ == "__main__":
 	# Experiment
 	parser.add_argument("--policy", default="TD3_BC")               # Policy name
 	parser.add_argument("--env", default="hopper-medium-v0")        # OpenAI gym environment name
+	parser.add_argument("--replay_buffer", default="")          # Path to CSV file holding a dataset to be used as a replay buffer
 	parser.add_argument("--seed", default=0, type=int)              # Sets Gym, PyTorch and Numpy seeds
 	parser.add_argument("--eval_freq", default=5e3, type=int)       # How often (time steps) we evaluate
 	parser.add_argument("--max_timesteps", default=1e6, type=int)   # Max time steps to run environment
@@ -55,6 +57,9 @@ if __name__ == "__main__":
 	# TD3 + BC
 	parser.add_argument("--alpha", default=2.5)
 	parser.add_argument("--normalize", default=True)
+	# Data analysis
+	parser.add_argument("--print_data_statistics", action="store_true") 
+
 	args = parser.parse_args()
 
 	file_name = f"{args.policy}_{args.env}_{args.seed}"
@@ -68,18 +73,95 @@ if __name__ == "__main__":
 	if args.save_model and not os.path.exists("./models"):
 		os.makedirs("./models")
 
-	env = gym.make(args.env)
-
-	# Set seeds
-	env.seed(args.seed)
-	env.action_space.seed(args.seed)
 	torch.manual_seed(args.seed)
 	np.random.seed(args.seed)
 	
-	state_dim = env.observation_space.shape[0]
-	action_dim = env.action_space.shape[0] 
-	max_action = float(env.action_space.high[0])
+	# if we don't have a replay buffer, we use the dataset from d4rl
+	if args.replay_buffer == "":
+		env = gym.make(args.env)
+		env.seed(args.seed)
+		env.action_space.seed(args.seed)
+		
+		
+		state_dim = env.observation_space.shape[0]
+		action_dim = env.action_space.shape[0] 
+		max_action = float(env.action_space.high[0])
 
+		# Prepare replay buffer
+		replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
+		replay_buffer.convert_D4RL(d4rl.qlearning_dataset(env))
+		if args.normalize:
+			mean,std = replay_buffer.normalize_states() 
+		else:
+			mean,std = 0,1
+	else:
+		# local function to convert string to numpy array
+		def to_numpy_array(string):
+			# Remove the brackets and newlines and split the string into individual numbers
+			numbers = string.strip('[]').replace('\n','').split()
+			return np.array(numbers, dtype=float)
+
+
+		# Load replay buffer from CSV file 
+		with open(args.replay_buffer, newline='') as csvfile:
+			reader = csv.DictReader(csvfile)
+			replay_buffer = None 
+			max_action = 0
+			for row in reader:
+				obs = to_numpy_array(row['observation'])
+				next_obs = to_numpy_array(row['next_observation'])
+				reward = float(row['reward'])
+				done = True if row['done'].lower() == 'true' else False
+				action = to_numpy_array(row['action'])
+
+				max_action = max(max_action, np.max(np.abs(action)))
+				# update maximal action in each dimensions
+				# if max_action is None:
+				# 	max_action = action.reshape((1,2)) 
+				# else:
+				# 	# concatenate max_action and abs(action)
+				# 	con_cat = np.concatenate((max_action, np.abs(action.reshape((1,2)))), axis=0)
+				# 	max_action = np.max(con_cat, axis=0).reshape((1,2))
+
+				# print("Observation: ", obs)
+				# print("Next Observation: ", next_obs)
+				# print("Reward: ", reward)
+				# print("Done: ", done)
+				# print("Action: ", action)
+
+				if done:
+					next_obs = np.zeros_like(obs)
+					action = np.zeros_like(action)
+
+				if replay_buffer is None:
+					state_dim = obs.shape[0]
+					action_dim = action.shape[0]
+					print(state_dim, action_dim)
+					replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
+				
+				if not obs.shape[0] == state_dim:
+					print(obs)
+					print(row['observation'])
+
+				if not action.shape[0] == action_dim:
+					print(action)
+					print(row['action'])
+
+
+				if not next_obs.shape[0] == state_dim:
+					print(next_obs)
+					print(row['next_observation'])
+
+				replay_buffer.add(obs, action, next_obs, reward, done)
+
+		mean,std = replay_buffer.normalize_states()
+
+
+	# print statistics of replay buffer
+	if args.print_data_statistics:
+		utils.analyze_data(replay_buffer)
+
+	# preparation of policy
 	kwargs = {
 		"state_dim": state_dim,
 		"action_dim": action_dim,
@@ -101,13 +183,6 @@ if __name__ == "__main__":
 		policy_file = file_name if args.load_model == "default" else args.load_model
 		policy.load(f"./models/{policy_file}")
 
-	replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
-	replay_buffer.convert_D4RL(d4rl.qlearning_dataset(env))
-	if args.normalize:
-		mean,std = replay_buffer.normalize_states() 
-	else:
-		mean,std = 0,1
-	
 	evaluations = []
 	for t in range(int(args.max_timesteps)):
 		policy.train(replay_buffer, args.batch_size)

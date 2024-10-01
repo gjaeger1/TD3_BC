@@ -55,3 +55,43 @@ class ReplayBuffer(object):
 		self.state = (self.state - mean)/std
 		self.next_state = (self.next_state - mean)/std
 		return mean, std
+	
+def analyze_data(data: ReplayBuffer):
+	# print dimenisons of the data
+	print(f"State dim: {data.state.shape}")
+	print(f"Action dim: {data.action.shape}")
+	print(f"Next state dim: {data.next_state.shape}")
+	print(f"Reward dim: {data.reward.shape}")
+	print(f"Not done dim: {data.not_done.shape}")
+
+	# print number of samples
+	print(f"Number of samples: {data.size}")
+
+	# print number of not done samples
+	print(f"Number of not done samples: {np.sum(data.not_done)}")
+
+	# print ratio of not done samples to overall number of samples
+	print(f"Ratio of not done samples: {np.sum(data.not_done)/data.size}")
+
+
+	# print min and max done signal
+	print(f"Min done signal: {np.min(data.not_done)}")
+	print(f"Max done signal: {np.max(data.not_done)}")
+
+	# print min/max/mean/std of rewards
+	print(f"Min reward: {np.min(data.reward)}")
+	print(f"Max reward: {np.max(data.reward)}")
+	print(f"Mean reward: {np.mean(data.reward)}")
+	print(f"Std reward: {np.std(data.reward)}")
+
+	# print min/max/mean/std of states for each dimension
+	print(f"Min state: {np.min(data.state, axis=0)}")
+	print(f"Max state: {np.max(data.state, axis=0)}")
+	print(f"Mean state: {np.mean(data.state, axis=0)}")
+	print(f"Std state: {np.std(data.state, axis=0)}")
+	
+	# print min/max difference between state and next state for each dimension
+	print(f"Min state-next state difference: {np.min(data.state - data.next_state, axis=0)}")
+	print(f"Max state-next state difference: {np.max(data.state - data.next_state, axis=0)}")
+
+
