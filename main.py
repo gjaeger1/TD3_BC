@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
 	args = parser.parse_args()
 
-	file_name = f"{args.policy}_{args.env}_{args.seed}"
+	file_name = f"{args.policy}_{args.seed}"
 	print("---------------------------------------")
 	print(f"Policy: {args.policy}, Seed: {args.seed}")
 	print("---------------------------------------")
