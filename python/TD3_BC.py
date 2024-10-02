@@ -171,9 +171,9 @@ class TD3_BC(object):
 			torch.jit.save(torch.jit.script(self.actor), filename + "_actor.pt")
 
 			# print example outputs of models to check if they are correct
-			critic_input1 = torch.rand(1, self.state_dim)
-			critic_input2 = torch.rand(1, self.action_dim)
-			actor_input = torch.rand(1, self.state_dim)
+			critic_input1 = torch.ones(1, self.state_dim)
+			critic_input2 = torch.ones(1, self.action_dim)
+			actor_input = torch.ones(1, self.state_dim)
 			print("Critic inputs:")
 			print(critic_input1)
 			print(critic_input2)

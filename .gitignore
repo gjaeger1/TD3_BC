@@ -1,0 +1,4 @@
+.vscode
+cpp/extern
+cpp/build
+python/__pycache__
