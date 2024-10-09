@@ -170,20 +170,6 @@ class TD3_BC(object):
 			torch.jit.save(torch.jit.script(self.critic), filename + "_critic.pt")
 			torch.jit.save(torch.jit.script(self.actor), filename + "_actor.pt")
 
-			# print example outputs of models to check if they are correct
-			critic_input1 = torch.ones(1, self.state_dim)
-			critic_input2 = torch.ones(1, self.action_dim)
-			actor_input = torch.ones(1, self.state_dim)
-			print("Critic inputs:")
-			print(critic_input1)
-			print(critic_input2)
-			print("Critic output:")
-			print(self.critic(critic_input1, critic_input2))
-			print("Actor input:")
-			print(actor_input)
-			print("Actor output:")
-			print(self.actor(actor_input))
-
 
 
 	def load(self, filename, use_torch_script=True):
