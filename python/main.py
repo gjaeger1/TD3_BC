@@ -7,6 +7,69 @@ import csv
 import utils
 import TD3_BC
 
+# local function to convert string to numpy array
+def to_numpy_array(string):
+	# Remove the brackets and newlines and split the string into individual numbers
+	numbers = string.strip('[]').replace('\n','').split()
+	return np.array(numbers, dtype=float)
+
+def find_csv_files(directory):
+	# find all csv files recursively and list their absolute path
+	csvs = []
+	for root, dirs, files in os.walk(directory):
+		for file in files:
+			if file.endswith(".csv"):
+				csvs.append(os.path.join(root, file))
+
+	return csvs
+
+def read_to_replay_buffer(filepath, replay_buffer = None):
+	# Initialize variables to prevent empty files from causing errors
+	max_action = 0
+	state_dim = 0
+	action_dim = 0
+
+	# Load replay buffer from CSV file 
+	with open(filepath, newline='') as csvfile:
+		print(f"Reading {filepath}")
+		reader = csv.DictReader(csvfile)
+		max_action = 0
+		for row in reader:
+			obs = to_numpy_array(row['observation'])
+			next_obs = to_numpy_array(row['next_observation'])
+			reward = float(row['reward'])
+			done = True if row['done'].lower() == 'true' else False
+			action = to_numpy_array(row['action'])
+
+			max_action = max(max_action, np.max(np.abs(action)))
+
+			state_dim = obs.shape[0]
+			action_dim = action.shape[0]
+
+			if done:
+				next_obs = np.zeros_like(obs)
+				action = np.zeros_like(action)
+
+			if replay_buffer is None:
+				print(state_dim, action_dim)
+				replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
+			
+			if not obs.shape[0] == state_dim:
+				print(obs)
+				print(row['observation'])
+
+			if not action.shape[0] == action_dim:
+				print(action)
+				print(row['action'])
+
+			if not next_obs.shape[0] == state_dim:
+				print(next_obs)
+				print(row['next_observation'])
+
+			replay_buffer.add(obs, action, next_obs, reward, done)
+
+	return replay_buffer, state_dim, action_dim, max_action
+
 if __name__ == "__main__":
 	
 	parser = argparse.ArgumentParser()
@@ -48,54 +111,22 @@ if __name__ == "__main__":
 	torch.manual_seed(args.seed)
 	np.random.seed(args.seed)
 	
-	# local function to convert string to numpy array
-	def to_numpy_array(string):
-		# Remove the brackets and newlines and split the string into individual numbers
-		numbers = string.strip('[]').replace('\n','').split()
-		return np.array(numbers, dtype=float)
+	max_action = 0
+	state_dim = 0
+	action_dim = 0
 
-
-	# Load replay buffer from CSV file 
-	with open(args.replay_buffer, newline='') as csvfile:
-		reader = csv.DictReader(csvfile)
-		replay_buffer = None 
-		max_action = 0
-		for row in reader:
-			obs = to_numpy_array(row['observation'])
-			next_obs = to_numpy_array(row['next_observation'])
-			reward = float(row['reward'])
-			done = True if row['done'].lower() == 'true' else False
-			action = to_numpy_array(row['action'])
-
-			max_action = max(max_action, np.max(np.abs(action)))
-
-			if done:
-				next_obs = np.zeros_like(obs)
-				action = np.zeros_like(action)
-
-			if replay_buffer is None:
-				state_dim = obs.shape[0]
-				action_dim = action.shape[0]
-				print(state_dim, action_dim)
-				replay_buffer = utils.ReplayBuffer(state_dim, action_dim)
-			
-			if not obs.shape[0] == state_dim:
-				print(obs)
-				print(row['observation'])
-
-			if not action.shape[0] == action_dim:
-				print(action)
-				print(row['action'])
-
-
-			if not next_obs.shape[0] == state_dim:
-				print(next_obs)
-				print(row['next_observation'])
-
-			replay_buffer.add(obs, action, next_obs, reward, done)
+	replay_buffer = None
+	if args.replay_buffer:
+		csvs = find_csv_files(args.replay_buffer)
+		for csvfile in csvs:
+			replay_buffer, state_dim, action_dim, max_action_tmp = read_to_replay_buffer(csvfile, replay_buffer)
+			max_action = max(max_action_tmp, np.max(np.abs(max_action)))
 
 	mean,std = replay_buffer.normalize_states()
 
+	# ensure that state_dim and action_dim are set
+	assert state_dim > 0
+	assert action_dim > 0
 
 	# print statistics of replay buffer
 	if args.print_data_statistics:
