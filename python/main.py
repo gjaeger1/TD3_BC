@@ -78,7 +78,7 @@ if __name__ == "__main__":
 	parser.add_argument("--replay_buffer", default="")          # Path to CSV file holding a dataset to be used as a replay buffer
 	parser.add_argument("--seed", default=0, type=int)              # Sets Gym, PyTorch and Numpy seeds
 	parser.add_argument("--eval_freq", default=5e3, type=int)       # How often (time steps) we evaluate
-	parser.add_argument("--max_timesteps", default=1, type=int)   # Max time steps to run environment
+	parser.add_argument("--max_timesteps", default=1e10, type=int)   # Max time steps to run environment
 	parser.add_argument("--save_model", action="store_true")        # Save model and optimizer parameters default: False
 	parser.add_argument("--load_model", default="")                 # Model load file name, "" doesn't load, "default" uses file_name
 	# TD3

@@ -159,22 +159,27 @@ class TD3_BC(object):
 
 
 	def save(self, filename, use_torch_script=True):
-
-		if not use_torch_script:
+		if use_torch_script:
+			torch.jit.save(torch.jit.script(self.critic.to(torch.device("cpu"))), filename + "_critic.pt")
+			torch.jit.save(torch.jit.script(self.actor.to(torch.device("cpu"))), filename + "_actor.pt")
+		else:
 			torch.save(self.critic.state_dict(), filename + "_critic")
 			torch.save(self.critic_optimizer.state_dict(), filename + "_critic_optimizer")
 			
 			torch.save(self.actor.state_dict(), filename + "_actor")
 			torch.save(self.actor_optimizer.state_dict(), filename + "_actor_optimizer")
-		else:
-			torch.jit.save(torch.jit.script(self.critic), filename + "_critic.pt")
-			torch.jit.save(torch.jit.script(self.actor), filename + "_actor.pt")
+			
 
 
 
 	def load(self, filename, use_torch_script=True):
+		if use_torch_script:
+			self.critic = torch.jit.load(filename + "_critic.pt")
+			self.actor = torch.jit.load(filename + "_actor.pt")
 
-		if not use_torch_script:
+			self.critic_target = copy.deepcopy(self.critic)
+			self.actor_target = copy.deepcopy(self.actor)
+		else:
 			self.critic.load_state_dict(torch.load(filename + "_critic"))
 			self.critic_optimizer.load_state_dict(torch.load(filename + "_critic_optimizer"))
 			self.critic_target = copy.deepcopy(self.critic)
@@ -182,9 +187,4 @@ class TD3_BC(object):
 			self.actor.load_state_dict(torch.load(filename + "_actor"))
 			self.actor_optimizer.load_state_dict(torch.load(filename + "_actor_optimizer"))
 			self.actor_target = copy.deepcopy(self.actor)
-		else:
-			self.critic = torch.jit.load(filename + "_critic.pt")
-			self.actor = torch.jit.load(filename + "_actor.pt")
-
-			self.critic_target = copy.deepcopy(self.critic)
-			self.actor_target = copy.deepcopy(self.actor)
+			

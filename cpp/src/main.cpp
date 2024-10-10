@@ -50,6 +50,7 @@ int main(int argc, const char* argv[]) {
   }
   catch (const c10::Error& e) {
     std::cerr << "error loading the model\n";
+    std::cerr << "error: " << e.what() << '\n';
     return -1;
   }
 
