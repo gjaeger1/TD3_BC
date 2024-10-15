@@ -164,6 +164,10 @@ class TD3_BC(object):
 		if use_torch_script:
 			torch.jit.save(torch.jit.script(self.critic.to(torch.device("cpu"))), filename + "_critic.pt")
 			torch.jit.save(torch.jit.script(self.actor.to(torch.device("cpu"))), filename + "_actor.pt")
+
+			# bring back to device
+			self.critic.to(device)
+			self.actor.to(device)
 		else:
 			torch.save(self.critic.state_dict(), filename + "_critic")
 			torch.save(self.critic_optimizer.state_dict(), filename + "_critic_optimizer")
