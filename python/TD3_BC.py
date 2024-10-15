@@ -99,7 +99,9 @@ class TD3_BC(object):
 
 
 	def select_action(self, state):
-		state = torch.FloatTensor(state.reshape(1, -1)).to(device)
+		# check if state is a numpy array and convert it to a tensor if necessary
+		if isinstance(state, np.ndarray):
+			state = torch.FloatTensor(state.reshape(1, -1)).to(device)
 		return self.actor(state).cpu().data.numpy().flatten()
 
 
