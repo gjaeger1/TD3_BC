@@ -128,7 +128,13 @@ if __name__ == "__main__":
 			replay_buffer, state_dim, action_dim, max_action_tmp = read_to_replay_buffer(csvfile, replay_buffer, args.ignore_velocities)
 			max_action = max(max_action_tmp, np.max(np.abs(max_action)))
 
-	mean,std = replay_buffer.normalize_states()
+	if args.normalize:
+		mean,std = replay_buffer.normalize_states()
+		print(f"Mean: {mean}")
+		print(f"Std: {std}")
+	else:
+		mean = np.zeros(state_dim)
+		std = np.ones(state_dim)
 
 	# ensure that state_dim and action_dim are set
 	assert state_dim > 0

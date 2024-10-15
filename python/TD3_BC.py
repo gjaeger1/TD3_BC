@@ -24,7 +24,6 @@ class Actor(nn.Module):
 		a = F.relu(self.l2(a))
 		return self.max_action * torch.tanh(self.l3(a))
 
-
 class Critic(nn.Module):
 	def __init__(self, state_dim, action_dim):
 		super(Critic, self).__init__()
@@ -61,6 +60,23 @@ class Critic(nn.Module):
 		q1 = self.l3(q1)
 		return q1
 
+class NormalizingNN(nn.Module):
+	def __init__(self, nn, mean, std):
+		super(NormalizingNN, self).__init__()
+
+		# if mean and std are numpy arrays, convert them to tensors
+		if isinstance(mean, np.ndarray):
+			self.mean = torch.FloatTensor(mean).to(device)
+			self.std = torch.FloatTensor(std).to(device)
+		else:
+			self.mean = mean
+			self.std = std
+			
+		self.nn = nn
+
+	def forward(self, state):
+		state = (state - self.mean)/self.std
+		return self.nn.forward(state)
 
 class TD3_BC(object):
 	def __init__(
@@ -160,19 +176,19 @@ class TD3_BC(object):
 				target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
 
 
-	def save(self, filename, use_torch_script=True):
+	def save(self, filename, mean, std, use_torch_script=True):
 		if use_torch_script:
-			torch.jit.save(torch.jit.script(self.critic.to(torch.device("cpu"))), filename + "_critic.pt")
-			torch.jit.save(torch.jit.script(self.actor.to(torch.device("cpu"))), filename + "_actor.pt")
+			torch.jit.save(torch.jit.script(NormalizingNN(self.critic, mean, std).to(torch.device("cpu"))), filename + "_critic.pt")
+			torch.jit.save(torch.jit.script(NormalizingNN(self.actor, mean, std).to(torch.device("cpu"))), filename + "_actor.pt")
 
 			# bring back to device
 			self.critic.to(device)
 			self.actor.to(device)
 		else:
-			torch.save(self.critic.state_dict(), filename + "_critic")
+			torch.save(NormalizingNN(self.critic, mean, std).state_dict(), filename + "_critic")
 			torch.save(self.critic_optimizer.state_dict(), filename + "_critic_optimizer")
 			
-			torch.save(self.actor.state_dict(), filename + "_actor")
+			torch.save(NormalizingNN(self.actor, mean, std).state_dict(), filename + "_actor")
 			torch.save(self.actor_optimizer.state_dict(), filename + "_actor_optimizer")
 			
 
