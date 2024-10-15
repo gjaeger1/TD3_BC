@@ -173,7 +173,7 @@ if __name__ == "__main__":
 			print(f"Time steps: {t+1}")
 			if args.save_model: policy.save(f"./models/{file_name}", use_torch_script=False)
 
-	if args.save_model: policy.save(f"./models/{file_name}")
+	if args.save_model: policy.save(f"./models/{file_name}", mean=mean, std=std, use_torch_script=True)
 
 	# print example outputs of model to check if it is working
 	# Sample replay buffer 
