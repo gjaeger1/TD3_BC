@@ -125,7 +125,7 @@ if __name__ == "__main__":
 	if args.replay_buffer:
 		csvs = find_csv_files(args.replay_buffer)
 		for csvfile in csvs:
-			replay_buffer, state_dim, action_dim, max_action_tmp = read_to_replay_buffer(csvfile, replay_buffer)
+			replay_buffer, state_dim, action_dim, max_action_tmp = read_to_replay_buffer(csvfile, replay_buffer, args.ignore_velocities)
 			max_action = max(max_action_tmp, np.max(np.abs(max_action)))
 
 	mean,std = replay_buffer.normalize_states()
