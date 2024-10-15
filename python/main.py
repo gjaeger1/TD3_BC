@@ -23,7 +23,7 @@ def find_csv_files(directory):
 
 	return csvs
 
-def read_to_replay_buffer(filepath, replay_buffer = None):
+def read_to_replay_buffer(filepath, replay_buffer = None, ignore_velocities = False):
 	# Initialize variables to prevent empty files from causing errors
 	max_action = 0
 	state_dim = 0
@@ -40,6 +40,11 @@ def read_to_replay_buffer(filepath, replay_buffer = None):
 			reward = float(row['reward'])
 			done = True if row['done'].lower() == 'true' else False
 			action = to_numpy_array(row['action'])
+
+			if ignore_velocities:
+				# ignore last two elements of the observation
+				obs = obs[:-2]
+				next_obs = next_obs[:-2]
 
 			max_action = max(max_action, np.max(np.abs(action)))
 
@@ -94,6 +99,7 @@ if __name__ == "__main__":
 	parser.add_argument("--normalize", default=True)
 	# Data analysis
 	parser.add_argument("--print_data_statistics", action="store_true") 
+	parser.add_argument("--ignore-velocities", action="store_true")
 
 	args = parser.parse_args()
 
@@ -162,3 +168,15 @@ if __name__ == "__main__":
 			if args.save_model: policy.save(f"./models/{file_name}", use_torch_script=False)
 
 	if args.save_model: policy.save(f"./models/{file_name}")
+
+	# print example outputs of model to check if it is working
+	# Sample replay buffer 
+	state, action, next_state, reward, not_done = replay_buffer.sample(args.batch_size)
+
+	with torch.no_grad():
+		# loop through states and select actions
+		for i in range(state.shape[0]):
+			# Select action according to policy and add clipped noise
+			action = policy.select_action(state[i])
+			print(f"State: {state[i]}")
+			print(f"Action: {action}")

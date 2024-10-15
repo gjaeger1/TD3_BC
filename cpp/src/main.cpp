@@ -38,7 +38,7 @@ int main(int argc, const char* argv[]) {
     }
   }
 
-  constexpr std::size_t state_dim = 18;
+  constexpr std::size_t state_dim = 13;
   constexpr std::size_t action_dim = 2;
 
   torch::jit::script::Module actor;
@@ -71,6 +71,9 @@ int main(int argc, const char* argv[]) {
 
   at::Tensor actor_output = actor.forward(actor_input).toTensor();
   std::cout << "Actor output: " << actor_output << '\n';
+  std::cout << "Dimensions: " << actor_output.sizes() << '\n';
+  std::cout << "actor_output[0]: " << actor_output[0][0].item<double>()  << '\n';
+  std::cout << "actor_output[1]: " << actor_output[0][1].item<double>()  << '\n';
 
   // std::vector<torch::jit::IValue> critic_input;
   //   critic_input.push_back(torch::ones({1, state_dim+action_dim}));
