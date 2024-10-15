@@ -177,11 +177,7 @@ if __name__ == "__main__":
 		# loop through states and select actions
 		for i in range(state.shape[0]):
 			# Select action according to policy and add clipped noise
-			tmps = state[i] 
-			if args.ignore_velocities:
-				tmps = tmps[:-2]
-
-			pred_action = policy.select_action(tmps)
-			print(f"State: {tmps}")
+			pred_action = policy.select_action(state[i])
+			print(f"State: {state[i]}")
 			print(f"Predicted Action: {pred_action}")
 			print(f"True Action: {action[i]}")
