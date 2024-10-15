@@ -60,9 +60,9 @@ class Critic(nn.Module):
 		q1 = self.l3(q1)
 		return q1
 
-class NormalizingNN(nn.Module):
+class NormalizingActor(nn.Module):
 	def __init__(self, nn, mean, std):
-		super(NormalizingNN, self).__init__()
+		super(NormalizingActor, self).__init__()
 
 		# if mean and std are numpy arrays, convert them to tensors
 		if isinstance(mean, np.ndarray):
@@ -71,12 +71,30 @@ class NormalizingNN(nn.Module):
 		else:
 			self.mean = mean
 			self.std = std
-			
+
 		self.nn = nn
 
 	def forward(self, state):
 		state = (state - self.mean)/self.std
 		return self.nn.forward(state)
+	
+class NormalizingCritic(nn.Module):
+	def __init__(self, nn, mean, std):
+		super(NormalizingCritic, self).__init__()
+
+		# if mean and std are numpy arrays, convert them to tensors
+		if isinstance(mean, np.ndarray):
+			self.mean = torch.FloatTensor(mean).to(device)
+			self.std = torch.FloatTensor(std).to(device)
+		else:
+			self.mean = mean
+			self.std = std
+
+		self.nn = nn
+
+	def forward(self, state, action):
+		state = (state - self.mean)/self.std
+		return self.nn.forward(state, action)
 
 class TD3_BC(object):
 	def __init__(
@@ -178,17 +196,17 @@ class TD3_BC(object):
 
 	def save(self, filename, mean, std, use_torch_script=True):
 		if use_torch_script:
-			torch.jit.save(torch.jit.script(NormalizingNN(self.critic, mean, std).to(torch.device("cpu"))), filename + "_critic.pt")
-			torch.jit.save(torch.jit.script(NormalizingNN(self.actor, mean, std).to(torch.device("cpu"))), filename + "_actor.pt")
+			torch.jit.save(torch.jit.script(NormalizingCritic(self.critic, mean, std).to(torch.device("cpu"))), filename + "_critic.pt")
+			torch.jit.save(torch.jit.script(NormalizingActor(self.actor, mean, std).to(torch.device("cpu"))), filename + "_actor.pt")
 
 			# bring back to device
 			self.critic.to(device)
 			self.actor.to(device)
 		else:
-			torch.save(NormalizingNN(self.critic, mean, std).state_dict(), filename + "_critic")
+			torch.save(NormalizingCritic(self.critic, mean, std).state_dict(), filename + "_critic")
 			torch.save(self.critic_optimizer.state_dict(), filename + "_critic_optimizer")
 			
-			torch.save(NormalizingNN(self.actor, mean, std).state_dict(), filename + "_actor")
+			torch.save(NormalizingActor(self.actor, mean, std).state_dict(), filename + "_actor")
 			torch.save(self.actor_optimizer.state_dict(), filename + "_actor_optimizer")
 			
 
