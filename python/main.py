@@ -181,6 +181,7 @@ if __name__ == "__main__":
 		# loop through states and select actions
 		for i in range(state.shape[0]):
 			# Select action according to policy and add clipped noise
-			action = policy.select_action(state[i])
+			pred_action = policy.select_action(state[i])
 			print(f"State: {state[i]}")
-			print(f"Action: {action}")
+			print(f"Predicted Action: {pred_action}")
+			print(f"True Action: {action[i]}")	
