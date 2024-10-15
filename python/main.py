@@ -125,16 +125,10 @@ if __name__ == "__main__":
 	if args.replay_buffer:
 		csvs = find_csv_files(args.replay_buffer)
 		for csvfile in csvs:
-			replay_buffer, state_dim, action_dim, max_action_tmp = read_to_replay_buffer(csvfile, replay_buffer, args.ignore_velocities)
+			replay_buffer, state_dim, action_dim, max_action_tmp = read_to_replay_buffer(csvfile, replay_buffer)
 			max_action = max(max_action_tmp, np.max(np.abs(max_action)))
 
-	if args.normalize:
-		mean,std = replay_buffer.normalize_states()
-		print(f"Mean: {mean}")
-		print(f"Std: {std}")
-	else:
-		mean = np.zeros(state_dim)
-		std = np.ones(state_dim)
+	mean,std = replay_buffer.normalize_states()
 
 	# ensure that state_dim and action_dim are set
 	assert state_dim > 0
@@ -173,7 +167,7 @@ if __name__ == "__main__":
 			print(f"Time steps: {t+1}")
 			if args.save_model: policy.save(f"./models/{file_name}", use_torch_script=False)
 
-	if args.save_model: policy.save(f"./models/{file_name}", mean=mean, std=std, use_torch_script=True)
+	if args.save_model: policy.save(f"./models/{file_name}")
 
 	# print example outputs of model to check if it is working
 	# Sample replay buffer 
@@ -183,7 +177,6 @@ if __name__ == "__main__":
 		# loop through states and select actions
 		for i in range(state.shape[0]):
 			# Select action according to policy and add clipped noise
-			pred_action = policy.select_action(state[i])
+			action = policy.select_action(state[i])
 			print(f"State: {state[i]}")
-			print(f"Predicted Action: {pred_action}")
-			print(f"True Action: {action[i]}")
+			print(f"Action: {action}")

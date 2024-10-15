@@ -15,11 +15,11 @@ class StaticNormalizationLayer(nn.Module):
         tmp_mean = torch.Tensor(mean.shape)
         self.mean = nn.Parameter(tmp_mean)  # nn.Parameter is a Tensor that's a module parameter.
         tmp_std = torch.Tensor(std.shape)
-		self.std = nn.Parameter(tmp_std)  # nn.Parameter is a Tensor that's a module parameter.
-
-		# copy mean and std to nn.Parameter
-		self.mean.data.copy_(mean)
-		self.std.data.copy_(std)
+        self.std = nn.Parameter(tmp_std)  # nn.Parameter is a Tensor that's a module parameter.
+        
+        # copy mean and std to nn.Parameter
+        self.mean.data.copy_(mean)
+        self.std.data.copy_(std)
 
     def forward(self, x):
         return torch.sub(x, self.mean).div(self.std)
@@ -197,19 +197,23 @@ class TD3_BC(object):
 
 
 	def save(self, filename, mean, std, use_torch_script=True):
-		if use_torch_script:
-			torch.jit.save(torch.jit.script(NormalizingCritic(self.critic, mean, std).to(torch.device("cpu"))), filename + "_critic.pt")
-			torch.jit.save(torch.jit.script(NormalizingActor(self.actor, mean, std).to(torch.device("cpu"))), filename + "_actor.pt")
-
-			# bring back to device
-			self.critic.to(device)
-			self.actor.to(device)
-		else:
-			torch.save(NormalizingCritic(self.critic, mean, std).state_dict(), filename + "_critic")
-			torch.save(self.critic_optimizer.state_dict(), filename + "_critic_optimizer")
-			
-			torch.save(NormalizingActor(self.actor, mean, std).state_dict(), filename + "_actor")
-			torch.save(self.actor_optimizer.state_dict(), filename + "_actor_optimizer")
+	    if isinstance(mean, np.ndarray):
+	        mean = torch.FloatTensor(mean).to(device)
+	    if isinstance(std, np.ndarray):
+	        std = torch.FloatTensor(std).to(device)
+	    if use_torch_script:
+	        torch.jit.save(torch.jit.script(NormalizingCritic(self.critic, mean, std).to(torch.device("cpu"))), filename + "_critic.pt")
+	        torch.jit.save(torch.jit.script(NormalizingActor(self.actor, mean, std).to(torch.device("cpu"))), filename + "_actor.pt")
+	        
+	        # bring back to device
+	        self.critic.to(device)
+	        self.actor.to(device)
+	    else:
+	        torch.save(NormalizingCritic(self.critic, mean, std).state_dict(), filename + "_critic")
+	        torch.save(self.critic_optimizer.state_dict(), filename + "_critic_optimizer")
+	        
+	        torch.save(NormalizingActor(self.actor, mean, std).state_dict(), filename + "_actor")
+	        torch.save(self.actor_optimizer.state_dict(), filename + "_actor_optimizer")
 			
 
 
