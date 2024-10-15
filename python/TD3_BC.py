@@ -8,6 +8,22 @@ import torch.nn.functional as F
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+class StaticNormalizationLayer(nn.Module):
+    """ Custom Linear layer but mimics a standard linear layer """
+    def __init__(self, mean, std):
+        super().__init__()
+        tmp_mean = torch.Tensor(mean.shape)
+        self.mean = nn.Parameter(tmp_mean)  # nn.Parameter is a Tensor that's a module parameter.
+        tmp_std = torch.Tensor(std.shape)
+		self.std = nn.Parameter(tmp_std)  # nn.Parameter is a Tensor that's a module parameter.
+
+		# copy mean and std to nn.Parameter
+		self.mean.data.copy_(mean)
+		self.std.data.copy_(std)
+
+    def forward(self, x):
+        return torch.sub(x, self.mean).div(self.std)
+
 class Actor(nn.Module):
 	def __init__(self, state_dim, action_dim, max_action):
 		super(Actor, self).__init__()
@@ -63,19 +79,11 @@ class Critic(nn.Module):
 class NormalizingActor(nn.Module):
 	def __init__(self, nn, mean, std):
 		super(NormalizingActor, self).__init__()
-
-		# if mean and std are numpy arrays, convert them to tensors
-		if isinstance(mean, np.ndarray):
-			self.mean = torch.FloatTensor(mean).to(device)
-			self.std = torch.FloatTensor(std).to(device)
-		else:
-			self.mean = mean
-			self.std = std
-
+		self.norm_layer = StaticNormalizationLayer(mean, std)
 		self.nn = nn
 
 	def forward(self, state):
-		state = (state - self.mean)/self.std
+		state = self.norm_layer(state)
 		return self.nn.forward(state)
 	
 class NormalizingCritic(nn.Module):
@@ -83,17 +91,11 @@ class NormalizingCritic(nn.Module):
 		super(NormalizingCritic, self).__init__()
 
 		# if mean and std are numpy arrays, convert them to tensors
-		if isinstance(mean, np.ndarray):
-			self.mean = torch.FloatTensor(mean).to(device)
-			self.std = torch.FloatTensor(std).to(device)
-		else:
-			self.mean = mean
-			self.std = std
-
+		self.norm_layer = StaticNormalizationLayer(mean, std)
 		self.nn = nn
 
 	def forward(self, state, action):
-		state = (state - self.mean)/self.std
+		state = self.norm_layer(state)
 		return self.nn.forward(state, action)
 
 class TD3_BC(object):
